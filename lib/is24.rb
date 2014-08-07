@@ -10,9 +10,14 @@ module Is24
   class Api
     include Is24::Logger
 
-    API_ENDPOINT = "http://rest.immobilienscout24.de/restapi/api/search/v1.0/"
-    API_OFFER_ENDPOINT = "http://rest.immobilienscout24.de/restapi/api/offer/v1.0/"
-    API_AUTHORIZATION_ENDPOINT = "http://rest.immobilienscout24.de/restapi/security/"
+    API_ENDPOINT            = "http://rest.immobilienscout24.de/restapi/"
+    SANDBOX_ENDPOINT        = "http://rest.sandbox-immobilienscout24.de/restapi/"
+    API_SEARCH_PATH         = "api/search/v1.0/"
+    API_OFFER_PATH          = "api/offer/v1.0/"
+    API_AUTHORIZATION_PATH  = "security/"
+    # => API_ENDPOINT = "http://rest.immobilienscout24.de/restapi/api/search/v1.0/"
+    # => API_OFFER_ENDPOINT = "http://rest.immobilienscout24.de/restapi/api/offer/v1.0/"
+    # => API_AUTHORIZATION_ENDPOINT = "http://rest.immobilienscout24.de/restapi/security/"
 
     # TODO move in separate module
     MARKETING_TYPES = {
@@ -87,6 +92,7 @@ module Is24
       @secret = options[:secret] || nil
       @consumer_secret = options[:consumer_secret] || nil
       @consumer_key = options[:consumer_key] || nil
+      @sandbox = options[:sandbox] || false
 
       raise "Missing Credentials!" if @consumer_secret.nil? || @consumer_key.nil?
     end
@@ -99,7 +105,7 @@ module Is24
       response = {
         :oauth_token => CGI::unescape(body[0].split("=")[1]),
         :oauth_token_secret => CGI::unescape(body[1].split("=")[1]),
-        :redirect_uri => "http://rest.immobilienscout24.de/restapi/security/oauth/confirm_access?#{body[0]}"
+        :redirect_uri => api_url("security/oauth/confirm_access?#{body[0]}")
       }
     end
 
@@ -172,23 +178,27 @@ module Is24
     end
 
     protected
+    
+    def api_url( path )
+      "#{ @sandbox ? SANDBOX_ENDPOINT : API_ENDPOINT }#{ path }"
+    end
 
     def connection(connection_type = :default, callback_uri = nil)
 
       # set request defaults
       defaults = {
-        :url => API_ENDPOINT,
+        :url => api_url(API_SEARCH_PATH),
         :headers => {
           :accept =>  'application/json',
           :user_agent => 'b\'nerd .media IS24 Ruby Client'}
       }
 
       defaults.merge!( {
-        :url => API_AUTHORIZATION_ENDPOINT
+        :url => api_url(API_OFFER_PATH)
       } ) if connection_type =~ /authorization/i
 
       defaults.merge!( {
-        :url => API_OFFER_ENDPOINT
+        :url => api_url(API_OFFER_PATH)
       } ) if connection_type =~ /offer/i
 
 
